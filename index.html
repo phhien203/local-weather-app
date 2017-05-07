@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Local Weather App</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <style>
+        html {
+            font-family: 'Roboto', sans-serif;
+            height: 100%;
+        }
+
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        #temperature-link {
+            display: flex;
+            align-items: center;
+            width: auto;
+            height: 30px;
+            border: 1px solid blueviolet;
+            border-radius: 5px;
+            padding: 5px;
+            text-decoration: none;
+            text-align: center;
+            transition: background-color 300ms ease-in, color 300ms ease-in;
+            color: black;
+            background-color: transparent;
+        }
+
+        #temperature-link:hover {
+            color: white;
+            background-color: blueviolet;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="skycons.js"></script>
+    <script>
+        var Utils = (function() {
+            return {
+                fahrenheitToCelsius: function fahrenheitToCelsius(val) {
+                    return Math.round((val - 32) * 5/9);
+                },
+                celsiusToFahrenheit: function celsiusToFahrenheit(val) {
+                    return Math.round(val * 9/5 + 32);
+                }
+            }
+        })();
+    </script>
+    <script>
+        $(document).ready(function() {
+            var CURRENT_LOCATION_SERVICE_URL = 'http://ip-api.com/json';
+            var WEATHER_INFO_SERVICE_URL = 'https://api.darksky.net/forecast/09f8deec05e8e16f5c06f96d7b255b3e/';
+            var skycons = new Skycons({'color': 'blueviolet'});
+
+            function switchTemperature() {
+                var unit = $(this).data('unit');
+                var $tempText = $(this).find('#temperature');
+                var $degree = $('#degree');
+
+                if ($tempText.length) {
+                    var tempValue = $tempText[0].innerText;
+                    tempValue = parseFloat(tempValue);
+
+                    if (unit === 'F') {
+                        $tempText.html(Utils.fahrenheitToCelsius(tempValue));
+                        $degree.html('&nbsp;&deg;C');
+                        $(this).data('unit', 'C');
+                    }
+                    else if (unit === 'C') {
+                        $tempText.html(Utils.celsiusToFahrenheit(tempValue));
+                        $degree.html('&nbsp;&deg;F');
+                        $(this).data('unit', 'F');
+                    }
+                }
+            }
+
+            function getWeatherInfoSuccess(data) {
+                if (data && data.currently) {
+                    if (data.currently.icon) {
+                        skycons.set('icon', data.currently.icon);
+                        skycons.play();
+                    }
+
+                    $('#summary').html(data.currently.summary);
+                    $('#temperature').html(Math.round(parseFloat(data.currently.temperature)));
+                    var $tempLink = $('#temperature-link');
+                    $tempLink.data('unit', 'F');
+                    $tempLink.on('click', switchTemperature);
+                }
+            }
+
+            function displayCurrentLocation(data) {
+                $('#current-location').html(data.city + ', ' + data.country);
+            }
+
+            $.get(CURRENT_LOCATION_SERVICE_URL, function(data) {
+                displayCurrentLocation(data);
+
+                if (data && data.lat && data.lon) {
+                    $.getJSON(WEATHER_INFO_SERVICE_URL + data.lat + ',' + data.lon + '?callback=?', getWeatherInfoSuccess);
+                }
+            }, 'jsonp');
+        });
+    </script>
+</head>
+<body>
+    <h1>Weather App</h1>
+    <h3 id="current-location"></h3>
+    <a href="#" id="temperature-link">
+        <h2 id="temperature"></h2>
+        <h2 id="degree">&nbsp;&deg;F</h2>
+    </a>
+    <h3 id="summary"></h3>
+    <canvas id="icon" width="256" height="256"></canvas>
+</body>
+</html>
